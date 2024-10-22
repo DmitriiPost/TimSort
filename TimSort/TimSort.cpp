@@ -1,4 +1,5 @@
 ﻿#include <iostream>
+#include <stack>
 
 using namespace std;
 
@@ -32,9 +33,14 @@ short int binarySearch(short int arr[], short int value, short int start, short 
             start = mid + 1;
         }
     }
-    return end;
+    return start - 1;
 }
 
+struct Run
+{
+    short int start;
+    short int size;
+};
 
 void insertionSort(short int arr[], short int left, short int right)
 {
@@ -62,7 +68,7 @@ void merge(short int arr[], int left, int mid, int right)
     {
         leftArr[i] = arr[left + i];
     }
-    for (short int i = 0; i < leftArrLen; i++)
+    for (short int i = 0; i < rightArrLen; i++)
     {
         rightArr[i] = arr[mid + 1 + i];
     }
@@ -74,7 +80,7 @@ void merge(short int arr[], int left, int mid, int right)
         if (currStreakLeft >= indicatorForGallop)
         {
             index = binarySearch(leftArr, rightArr[j], i, leftArrLen - 1);
-            for (short int x = i; x <= index; x++)
+            for (short int x = i; x <= index && x < leftArrLen; x++)
             {
                 arr[k] = leftArr[x];
                 k++;
@@ -85,7 +91,7 @@ void merge(short int arr[], int left, int mid, int right)
         if (currStreakRight >= indicatorForGallop)
         {
             index = binarySearch(rightArr, leftArr[i], j, rightArrLen - 1);
-            for (short int x = j; x <= index; x++)
+            for (short int x = j; x <= index && x < rightArrLen; x++)
             {
                 arr[k] = rightArr[x];
                 k++;
@@ -94,21 +100,26 @@ void merge(short int arr[], int left, int mid, int right)
             currStreakRight = 0;
         }
 
-        if (leftArr[i] <= rightArr[j])
+        if (i < leftArrLen && j < rightArrLen)
         {
-            arr[k] = leftArr[i];
-            currStreakLeft++;
-            currStreakRight = 0;
-            i++;
+
+
+            if (leftArr[i] <= rightArr[j])
+            {
+                arr[k] = leftArr[i];
+                currStreakLeft++;
+                currStreakRight = 0;
+                i++;
+            }
+            else
+            {
+                arr[k] = rightArr[j];
+                currStreakLeft = 0;
+                currStreakRight++;
+                j++;
+            }
+            k++;
         }
-        else
-        {
-            arr[k] = rightArr[j];
-            currStreakLeft = 0;
-            currStreakRight++;
-            j++;
-        }
-        k++;
     }
 
     while (i < leftArrLen)
@@ -124,16 +135,66 @@ void merge(short int arr[], int left, int mid, int right)
         k++;
         j++;
     }
+    delete[] leftArr;
+    delete[] rightArr;
 }
 
 void TimSort(short int arr[], int len)
 {
     short int minRun = getMinRun(len);
+    stack<Run> runStack;
     for (short int i = 0; i < len; i+=minRun)
     {
+        short int end = min(i + minRun - 1, len - 1);
+        short int length = end - i + 1;
         insertionSort(arr, i, min(len - 1, i + minRun - 1));
+        runStack.push({ i, length });
+
+        while (runStack.size() >= 3)
+        {
+            Run x = runStack.top();
+            runStack.pop();
+            Run y = runStack.top();
+            runStack.pop();
+            Run z = runStack.top();
+
+            if ((z.size > x.size + y.size) && (y.size > x.size))
+            {
+                merge(arr, y.start, y.start + y.size - 1, x.start + x.size - 1);
+                short int xEnd = y.size + x.size;
+                runStack.push({ y.start, xEnd });
+            }
+            else
+            {
+                if (x.size < z.size)
+                {
+                    merge(arr, y.start, y.start + y.size - 1, x.start + x.size - 1);
+                    short int endX = x.start + x.size - 1;
+                    runStack.push({ y.start, endX });
+                }
+                else
+                {
+                    merge(arr, z.start, z.start + z.size - 1, y.start + y.size - 1);
+                    runStack.pop();
+                    short int endY = z.size + y.size;
+                    runStack.push({ z.start, endY });
+                    runStack.push(x);
+                }
+            }
+        }
+
+        while (runStack.size() >= 2)
+        {
+            Run x = runStack.top();
+            runStack.pop();
+            Run y = runStack.top();
+            runStack.pop();
+            merge(arr, y.start, y.start + y.size - 1, x.start + x.size - 1);
+            short int endX = y.size + x.size;
+            runStack.push({ y.start, endX });
+        }
     }
-    short int size = minRun;
+    /*short int size = minRun;
     while (size < len)
     {
         for (short int left = 0; left < len; left = left + 2 * size)
@@ -143,7 +204,8 @@ void TimSort(short int arr[], int len)
             merge(arr, left, mid, right);
         }
         size = size * 2;
-    }
+    }*/
+   
 }
 
 void printArr(short int arr[], short int len)
